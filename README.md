@@ -1,4 +1,4 @@
-# Backend TP - Alquiler de Productos de Playa 🏝️
+# Backend TP - Alquiler de Productos de Playa
 
 Este backend fue desarrollado por Bautista Leon Suarez, como parte del Trabajo Práctico de la materia Full Stack.  
 El sistema permite gestionar el alquiler de productos para un parador: desde la carga de productos hasta la reserva, pago y cancelación.
