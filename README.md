@@ -1,47 +1,55 @@
 # Backend TP - Alquiler de Productos de Playa
 
-Este backend fue desarrollado por Bautista Leon Suarez, como parte del Trabajo Práctico de la materia Full Stack.  
-El sistema permite gestionar el alquiler de productos para un parador: desde la carga de productos hasta la reserva, pago y cancelación.
+Sistema desarrollado por Bautista Suárez como parte del Trabajo Práctico de Full Stack.  
+Permite gestionar el alquiler de productos para un parador en el Caribe: reservas, pagos, cancelaciones, y devoluciones.
 
 ---
 
-Tecnologías utilizadas
+## ⚙️ Tecnologías utilizadas
 
-- Node.js + Express.js (servidor y rutas REST)
-- MongoDB Atlas + Mongoose (persistencia)
-- Postman (para pruebas de API)
+- Node.js + Express.js
+- MongoDB Atlas + Mongoose
+- Postman para pruebas
 - Git y GitHub
 - WebStorm como entorno de desarrollo
 
 ---
 
-Funcionalidades implementadas
+## Funcionalidades implementadas
 
-- Gestión de productos (alta con dispositivos requeridos, apto para niños, etc.)
-- Reservas con duración de 30 minutos por turno (hasta 3 turnos consecutivos)
-- Validaciones:
-  - Máximo 48hs de anticipación
-  - Cancelación hasta 2 horas antes
-  - Restricción para pagar en efectivo fuera de tiempo
-- Métodos de pago: efectivo o transferencia
-- Moneda: ARS o USD, con conversión automática ($1300 = 1 USD)
-- Descuento del 10% al reservar más de un producto
-- Seguro de tormenta: si no se puede disfrutar el turno, se reembolsa el 50%
-- Manejo de estados: `pendiente`, `confirmada`, `cancelada`, `reembolsada`
+- Gestión de productos
+- Gestión de reservas
+- Validaciones de negocio:
+  - Reservas con máximo de 3 turnos consecutivos
+  - Anticipación máxima de 48 horas
+  - Cancelación sin costo hasta 2 horas antes
+  - Pago en efectivo o transferencia
+  - Control de solapamiento de reservas (no se puede reservar un producto ya ocupado)
+  - Moneda local (ARS) o dólares (USD)
+  - Descuento del 10% en el total si se reservan múltiples productos
+  - Seguro de tormenta (reintegro del 50% en caso de mal clima)
+  - Finalización de reservas al devolver los productos
 
 ---
 
-Rutas principales
+## Endpoints principales
 
 ### Productos
-- `GET /api/productos` – Listar productos
-- `POST /api/productos` – Crear producto nuevo
+| Método | Ruta                  | Descripción                  |
+|--------|------------------------|-------------------------------|
+| GET    | `/api/productos`        | Listar productos              |
+| POST   | `/api/productos`        | Crear producto nuevo          |
 
 ### Reservas
-- `POST /api/reservas` – Crear una reserva
-- `GET /api/reservas` – Listar todas las reservas
-- `PUT /api/reservas/pagar/:id` – Confirmar pago
-- `DELETE /api/reservas/:id` – Cancelar una reserva
-- `PUT /api/reservas/tormenta/:id` – Aplicar seguro de tormenta
+| Método | Ruta                         | Descripción                    |
+|--------|-------------------------------|---------------------------------|
+| GET    | `/api/reservas`               | Listar todas las reservas       |
+| POST   | `/api/reservas`               | Crear nueva reserva             |
+| PUT    | `/api/reservas/pagar/:id`     | Confirmar pago de una reserva   |
+| PUT    | `/api/reservas/finalizar/:id` | Finalizar una reserva (devolución) |
+| PUT    | `/api/reservas/tormenta/:id`  | Aplicar seguro de tormenta      |
+| DELETE | `/api/reservas/:id`           | Cancelar una reserva            |
+
+---
 
 
