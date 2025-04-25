@@ -39,6 +39,30 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ mensaje: 'Uno o más productos no existen' });
         }
 
+
+// Calcular fecha de fin de la nueva reserva
+        const fechaInicioNueva = new Date(fechaInicio);
+        const fechaFinNueva = new Date(fechaInicioNueva.getTime() + cantidadTurnos * 30 * 60000);
+
+// Verificar si alguno de los productos ya está reservado en ese rango
+        const conflicto = await Reserva.findOne({
+            productos: { $in: productos },
+            estado: { $in: ['pendiente', 'confirmada'] },
+            fechaInicio: { $lt: fechaFinNueva }
+        });
+
+        if (conflicto) {
+            const conflictoInicio = new Date(conflicto.fechaInicio);
+            const conflictoFin = new Date(conflicto.fechaInicio.getTime() + conflicto.cantidadTurnos * 30 * 60000);
+
+            if (fechaInicioNueva < conflictoFin) {
+                return res.status(400).json({ mensaje: 'Uno o más productos ya están reservados en el horario solicitado' });
+            }
+        }
+
+
+
+
         // Calcular total en ARS
         let totalARS = 0;
         for (const producto of productosEncontrados) {
@@ -70,9 +94,11 @@ router.post('/', async (req, res) => {
 
         const reservaGuardada = await nuevaReserva.save();
         res.status(201).json(reservaGuardada);
-    } catch (error) {
-        res.status(500).json({ mensaje: 'Error al crear la reserva', error });
+    }catch (error) {
+        console.error(error); // para verlo en consola
+        res.status(500).json({ mensaje: 'Error al crear la reserva', error: error.message });
     }
+
 });
 
 
@@ -135,6 +161,31 @@ router.put('/pagar/:id', async (req, res) => {
         res.status(500).json({ mensaje: 'Error al confirmar el pago', error });
     }
 });
+
+// Finalizar una reserva (cuando se devuelve el producto)
+router.put('/finalizar/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reserva = await Reserva.findById(id);
+
+        if (!reserva) {
+            return res.status(404).json({ mensaje: 'Reserva no encontrada' });
+        }
+
+        if (reserva.estado !== 'confirmada') {
+            return res.status(400).json({ mensaje: 'Solo se pueden finalizar reservas confirmadas' });
+        }
+
+        reserva.estado = 'finalizada';
+        await reserva.save();
+
+        res.json({ mensaje: 'Reserva finalizada exitosamente', reserva });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ mensaje: 'Error al finalizar la reserva', error: error.message });
+    }
+});
+
 
 // Aplicar seguro de tormenta (devolver 50%)
 router.put('/tormenta/:id', async (req, res) => {

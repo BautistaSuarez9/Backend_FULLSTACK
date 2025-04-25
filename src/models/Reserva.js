@@ -44,7 +44,7 @@ const reservaSchema = new mongoose.Schema({
     },
     estado: {
         type: String,
-        enum: ['pendiente', 'confirmada', 'cancelada', 'reembolsada'],
+        enum: ['pendiente', 'confirmada', 'cancelada', 'reembolsada', 'finalizada'],
         default: 'pendiente'
     },
     reembolso: Number
