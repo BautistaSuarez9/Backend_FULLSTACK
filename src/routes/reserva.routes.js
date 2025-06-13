@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // POST - crear reserva
 router.post('/', async (req, res) => {
     try {
-        const { clienteNombre, productos, fechaInicio, cantidadTurnos, metodoPago, moneda } = req.body;
+        const { clienteNombre, productos, fechaInicio, cantidadTurnos, metodoPago, moneda, cantidadPersonas } = req.body;
 
         // Validar anticipación máxima de 48hs
         const ahora = new Date();
@@ -38,6 +38,37 @@ router.post('/', async (req, res) => {
         if (productosEncontrados.length !== productos.length) {
             return res.status(404).json({ mensaje: 'Uno o más productos no existen' });
         }
+        console.log("Cantidad personas recibida:", cantidadPersonas);
+
+        for (const producto of productosEncontrados) {
+            if (['jetsky', 'cuatriciclo'].includes(producto.tipo)) {
+                if (cantidadPersonas > 2) {
+                    return res.status(400).json({ mensaje: `No se pueden reservar más de 2 personas para el producto ${producto.nombre}` });
+                }
+            }
+        }
+
+
+        // Validar solapamiento de reservas existentes
+        for (const productoId of productos) {
+            const reservasExistentes = await Reserva.find({
+                productos: productoId,
+                estado: { $in: ['pendiente', 'confirmada'] }
+            });
+
+            for (const reserva of reservasExistentes) {
+                const inicioExistente = new Date(reserva.fechaInicio);
+                const finExistente = new Date(inicioExistente.getTime() + reserva.cantidadTurnos * 30 * 60000);
+
+                const inicioNueva = new Date(fechaInicio);
+                const finNueva = new Date(inicioNueva.getTime() + cantidadTurnos * 30 * 60000);
+
+                if (inicioNueva < finExistente && finNueva > inicioExistente) {
+                    return res.status(400).json({ mensaje: 'Uno o más productos ya están reservados en el horario solicitado.' });
+                }
+            }
+        }
+
 
 
 // Calcular fecha de fin de la nueva reserva
@@ -88,9 +119,11 @@ router.post('/', async (req, res) => {
             cantidadTurnos,
             metodoPago,
             moneda,
+            cantidadPersonas,  // NUEVO
             total: totalARS,
             totalUSD
         });
+
 
         const reservaGuardada = await nuevaReserva.save();
         res.status(201).json(reservaGuardada);
@@ -187,7 +220,7 @@ router.put('/finalizar/:id', async (req, res) => {
 });
 
 
-// Aplicar seguro de tormenta (devolver 50%)
+
 router.put('/tormenta/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -201,12 +234,10 @@ router.put('/tormenta/:id', async (req, res) => {
             return res.status(400).json({ mensaje: 'Solo se puede aplicar el seguro a reservas confirmadas' });
         }
 
-        // Calcular devolución
         const reembolso = reserva.moneda === 'USD'
             ? parseFloat((reserva.totalUSD / 2).toFixed(2))
             : reserva.total / 2;
 
-        // Actualizar reserva
         reserva.estado = 'reembolsada';
         reserva.reembolso = reembolso;
         await reserva.save();
@@ -215,6 +246,45 @@ router.put('/tormenta/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ mensaje: 'Error al aplicar seguro de tormenta', error });
     }
+
+    router.get('/disponibles', async (req, res) => {
+        try {
+            const { fechaInicio, cantidadTurnos } = req.query;
+
+            if (!fechaInicio || !cantidadTurnos) {
+                return res.status(400).json({ mensaje: 'Se requiere fechaInicio y cantidadTurnos' });
+            }
+
+            const inicioNueva = new Date(fechaInicio);
+            const finNueva = new Date(inicioNueva.getTime() + cantidadTurnos * 30 * 60000);
+
+            const reservas = await Reserva.find({
+                estado: { $in: ['pendiente', 'confirmada'] }
+            });
+
+            const productosOcupados = new Set();
+
+            for (const reserva of reservas) {
+                const inicioExistente = new Date(reserva.fechaInicio);
+                const finExistente = new Date(inicioExistente.getTime() + reserva.cantidadTurnos * 30 * 60000);
+
+                if (inicioNueva < finExistente && finNueva > inicioExistente) {
+                    reserva.productos.forEach(p => productosOcupados.add(p.toString()));
+                }
+            }
+
+            const disponibles = await Producto.find({
+                _id: { $nin: Array.from(productosOcupados) }
+            });
+
+            res.json(disponibles);
+        } catch (error) {
+            res.status(500).json({ mensaje: 'Error al buscar productos disponibles', error });
+        }
+    });
+
+
+
 });
 
 

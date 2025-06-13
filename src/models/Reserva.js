@@ -5,6 +5,7 @@ const reservaSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    cantidadPersonas: { type: Number, required: false },
     productos: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Producto',
